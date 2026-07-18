@@ -51,6 +51,29 @@ export function findBugPatterns(code: string, language: string): Finding[] {
       });
     }
 
+    // --- Off-by-one loop bounds (JS/TS-style C for-loops) ---
+    if (/for\s*\([^;]*;\s*[\w$]+\s*<=\s*[\w$.\[\]]+\.length\s*;/.test(line)) {
+      findings.push({
+        category: "bug",
+        severity: "high",
+        line: lineNo,
+        title: "Off-by-one loop bound (<= .length)",
+        detail: "Looping while i <= array.length reads one index past the end — array[length] is undefined. Use '<' unless reading past the end is genuinely intended.",
+      });
+    }
+    if (
+      /for\s*\(\s*[\w$]+\s*=\s*[\w$.\[\]]+\.length\s*;/.test(line) &&
+      /[\w$]+\s*>=\s*0/.test(line)
+    ) {
+      findings.push({
+        category: "bug",
+        severity: "high",
+        line: lineNo,
+        title: "Off-by-one loop bound (starts at .length)",
+        detail: "Starting the index at array.length means the first access is array[length], which is undefined — start at 'length - 1' instead.",
+      });
+    }
+
     // --- JS / TS ---
     if (isJsLike) {
       if (/[^=!<>]==[^=]/.test(line) && !/===/.test(line)) {
@@ -64,7 +87,7 @@ export function findBugPatterns(code: string, language: string): Finding[] {
       }
       if (/console\.(log|debug)\(/.test(line)) {
         findings.push({
-          category: "bug",
+          category: "style",
           severity: "low",
           line: lineNo,
           title: "Leftover console output",
@@ -122,7 +145,7 @@ export function findBugPatterns(code: string, language: string): Finding[] {
       }
       if (/print\(/.test(trimmed)) {
         findings.push({
-          category: "bug",
+          category: "style",
           severity: "low",
           line: lineNo,
           title: "Leftover print statement",

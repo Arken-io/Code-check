@@ -226,9 +226,19 @@ export function AnalyzerTool() {
               <div className="flex flex-col gap-5 rounded-xl2 border border-border bg-surface/60 p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
                 <ScoreGauge score={result.score} label={result.scoreLabel} />
                 <div className="flex flex-col items-start gap-1 text-[12.5px] text-ink-faint sm:items-end">
+                  <span className="font-medium text-ink-muted">
+                    {totalFindings === 0
+                      ? "No issues found"
+                      : `${totalFindings} issue${totalFindings === 1 ? "" : "s"} found — ${(
+                          Object.keys(CATEGORY_META) as FindingCategory[]
+                        )
+                          .map((cat) => ({ cat, count: grouped[cat].length }))
+                          .filter((c) => c.count > 0)
+                          .map((c) => `${c.count} ${CATEGORY_META[c.cat].label}`)
+                          .join(", ")}`}
+                  </span>
                   <span>
-                    {result.language} · {result.lineCount} lines · {totalFindings}{" "}
-                    finding{totalFindings === 1 ? "" : "s"}
+                    {result.language} · {result.lineCount} lines
                   </span>
                   <button
                     type="button"

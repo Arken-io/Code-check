@@ -3,6 +3,7 @@ import { detectLanguage } from "./detectLanguage";
 import { findBugPatterns } from "./bugs";
 import { findPerformanceIssues } from "./performance";
 import { findDuplication } from "./duplication";
+import { findUndeclaredReferences } from "./undeclared";
 import { computeScore } from "./score";
 
 /**
@@ -20,6 +21,7 @@ export function analyze(code: string, filename?: string): AnalysisResult {
     ...findBugPatterns(code, language),
     ...findPerformanceIssues(code, language),
     ...findDuplication(code),
+    ...findUndeclaredReferences(code, language),
   ].sort((a, b) => a.line - b.line);
 
   const { score, label } = computeScore(findings);
