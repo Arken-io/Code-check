@@ -40,7 +40,7 @@ export function findPerformanceIssues(code: string, language: string): Finding[]
           severity: "medium",
           line: lineNo,
           title: "Nested loop",
-          detail: "A loop inside another loop is O(n²) or worse — fine for small inputs, worth a second look if this runs on large data.",
+          detail: "A loop inside another loop is O(n²) or worse. Fine for small inputs, worth a second look if this runs on large data.",
         });
         // One flag per file keeps this from spamming a hot nested-loop
         // block line by line; the location of the first one is enough
@@ -66,7 +66,7 @@ export function findPerformanceIssues(code: string, language: string): Finding[]
         severity: "low",
         line: lineNo,
         title: "Array search inside a loop",
-        detail: "indexOf/includes/find scan the whole array each call — if this runs per-iteration on a large list, a Set or Map lookup is O(1) instead.",
+        detail: "indexOf/includes/find scan the whole array each call. If this runs per-iteration on a large list, a Set or Map lookup is O(1) instead.",
       });
     }
     if (/\+=\s*["'`]/.test(line) && /for|while/.test(code)) {
@@ -75,7 +75,7 @@ export function findPerformanceIssues(code: string, language: string): Finding[]
         severity: "low",
         line: lineNo,
         title: "String concatenation with +=",
-        detail: "Repeated += on a string inside a loop can be quadratic in some engines — building an array and joining once is usually faster for large loops.",
+        detail: "Repeated += on a string inside a loop can be quadratic in some engines. Building an array and joining once is usually faster for large loops.",
       });
     }
     if (/document\.(getElementById|querySelector)/.test(line) && isLoopOpener(lines[Math.max(0, i - 1)] || "")) {
@@ -84,7 +84,7 @@ export function findPerformanceIssues(code: string, language: string): Finding[]
         severity: "medium",
         line: lineNo,
         title: "DOM query inside a loop",
-        detail: "Querying the DOM repeatedly inside a loop is expensive — cache the element(s) outside the loop.",
+        detail: "Querying the DOM repeatedly inside a loop is expensive. Cache the element(s) outside the loop.",
       });
     }
 
@@ -104,7 +104,7 @@ export function findPerformanceIssues(code: string, language: string): Finding[]
         severity: "medium",
         line: lineNo,
         title: "sleep() inside a loop",
-        detail: "A sleep on every iteration adds up fast — double check this is really the intended polling interval.",
+        detail: "A sleep on every iteration adds up fast. Double check this is really the intended polling interval.",
       });
     }
 

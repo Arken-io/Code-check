@@ -39,7 +39,7 @@ export function findDuplication(code: string): Finding[] {
     } else if (!reportedStarts.has(start)) {
       reportedStarts.add(start);
       findings.push({
-        category: "duplication",
+        category: "quality",
         severity: "medium",
         line: start + 1,
         title: `Repeated block (${MIN_BLOCK_LINES}+ lines)`,

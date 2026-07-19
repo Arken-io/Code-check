@@ -1,6 +1,6 @@
 export type Severity = "high" | "medium" | "low";
 
-export type FindingCategory = "bug" | "performance" | "duplication" | "style";
+export type FindingCategory = "bug" | "performance" | "security" | "quality" | "practice";
 
 export interface Finding {
   category: FindingCategory;

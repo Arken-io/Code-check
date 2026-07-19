@@ -125,7 +125,7 @@ export function findUndeclaredReferences(code: string, language: string): Findin
         severity: "high",
         line: i + 1,
         title: `Possibly undefined variable: '${name}'`,
-        detail: `'${name}' is used here but doesn't match any parameter, let/const/var, or function name declared in this snippet — check for a typo or a missing declaration.`,
+        detail: `'${name}' is used here but doesn't match any parameter, let/const/var, or function name declared in this snippet. Check for a typo or a missing declaration.`,
       });
     }
   });

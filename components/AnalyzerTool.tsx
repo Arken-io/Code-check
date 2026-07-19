@@ -9,11 +9,13 @@ import {
   Copy as CopyIcon,
   Check,
   Trash2,
-  ShieldCheck,
+  ShieldAlert,
+  Lightbulb,
   Zap,
   Files,
   ChevronDown,
   ChevronUp,
+  ClipboardPaste,
 } from "lucide-react";
 import { analyze } from "@/lib/analysis";
 import type { AnalysisResult, Finding, FindingCategory } from "@/lib/analysis/types";
@@ -35,8 +37,21 @@ const CATEGORY_META: Record<
 > = {
   bug: { label: "Bugs", icon: Bug, color: "text-red-400" },
   performance: { label: "Performance", icon: Zap, color: "text-amber-400" },
-  duplication: { label: "Duplication", icon: Files, color: "text-accent-soft" },
-  style: { label: "Style", icon: ShieldCheck, color: "text-emerald-400" },
+  security: { label: "Security", icon: ShieldAlert, color: "text-rose-400" },
+  quality: { label: "Code Quality", icon: Files, color: "text-accent-soft" },
+  practice: { label: "Best Practices", icon: Lightbulb, color: "text-emerald-400" },
+};
+
+function pluralize(count: number, singular: string): string {
+  return count === 1 ? singular : `${singular}s`;
+}
+
+const CATEGORY_SINGULAR: Record<FindingCategory, string> = {
+  bug: "Bug",
+  performance: "Performance Issue",
+  security: "Security Issue",
+  quality: "Code Quality Issue",
+  practice: "Best Practice Issue",
 };
 
 function severityDot(severity: Finding["severity"]) {
@@ -82,7 +97,7 @@ function ScoreGauge({ score, label }: { score: number; label: string }) {
       </div>
       <div>
         <div className={`text-[14px] font-semibold ${color}`}>{label}</div>
-        <div className="text-[12px] text-ink-faint">Heuristic score — not a certification.</div>
+        <div className="text-[12px] text-ink-faint">Heuristic score, not a certification.</div>
       </div>
     </div>
   );
@@ -95,8 +110,9 @@ export function AnalyzerTool() {
   const [collapsed, setCollapsed] = useState<Record<FindingCategory, boolean>>({
     bug: false,
     performance: false,
-    duplication: false,
-    style: false,
+    security: false,
+    quality: false,
+    practice: false,
   });
 
   const grouped = useMemo(() => {
@@ -104,8 +120,9 @@ export function AnalyzerTool() {
     const groups: Record<FindingCategory, Finding[]> = {
       bug: [],
       performance: [],
-      duplication: [],
-      style: [],
+      security: [],
+      quality: [],
+      practice: [],
     };
     result.findings.forEach((f) => groups[f.category].push(f));
     return groups;
@@ -121,13 +138,22 @@ export function AnalyzerTool() {
     setResult(null);
   }
 
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setCode(text);
+    } catch {
+      // Clipboard permission denied or unavailable, no-op.
+    }
+  }
+
   async function handleCopySummary() {
     if (!result) return;
     const lines = [
       `Score: ${result.score}/10 (${result.scoreLabel})`,
       `Language: ${result.language}`,
       ...result.findings.map(
-        (f) => `[${f.category}/${f.severity}] line ${f.line}: ${f.title} — ${f.detail}`
+        (f) => `[${f.category}/${f.severity}] line ${f.line}: ${f.title}: ${f.detail}`
       ),
     ];
     try {
@@ -135,7 +161,7 @@ export function AnalyzerTool() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard blocked — no-op.
+      // Clipboard blocked, no-op.
     }
   }
 
@@ -164,9 +190,9 @@ export function AnalyzerTool() {
             <span className="text-ink-muted">get a straight answer.</span>
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-ink-muted">
-            Bugs, slow spots, and copy-pasted blocks — flagged instantly by
-            a set of plain static checks, no model in the loop. A score out
-            of 10 to boot.
+            Bugs, slow spots, and copy-pasted blocks, flagged instantly by
+            a set of plain static checks. No model in the loop, just a score
+            out of 10.
           </p>
         </motion.div>
 
@@ -197,6 +223,14 @@ export function AnalyzerTool() {
               <Gauge size={15} />
               Analyze
             </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handlePaste}
+              className="focus-ring flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border px-3.5 py-3 text-[13px] font-medium text-ink-muted transition-colors hover:border-accent-soft/40 hover:text-accent-soft"
+            >
+              <ClipboardPaste size={14} />
+              Paste
+            </motion.button>
             {(code || result) && (
               <motion.button
                 initial={{ opacity: 0, width: 0 }}
@@ -225,19 +259,25 @@ export function AnalyzerTool() {
             >
               <div className="flex flex-col gap-5 rounded-xl2 border border-border bg-surface/60 p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
                 <ScoreGauge score={result.score} label={result.scoreLabel} />
-                <div className="flex flex-col items-start gap-1 text-[12.5px] text-ink-faint sm:items-end">
-                  <span className="font-medium text-ink-muted">
+                <div className="flex flex-col items-start gap-1.5 text-[12.5px] text-ink-faint sm:items-end">
+                  <span className="text-[14.5px] font-semibold text-ink">
                     {totalFindings === 0
-                      ? "No issues found"
-                      : `${totalFindings} issue${totalFindings === 1 ? "" : "s"} found — ${(
-                          Object.keys(CATEGORY_META) as FindingCategory[]
-                        )
-                          .map((cat) => ({ cat, count: grouped[cat].length }))
-                          .filter((c) => c.count > 0)
-                          .map((c) => `${c.count} ${CATEGORY_META[c.cat].label}`)
-                          .join(", ")}`}
+                      ? "No Issues Found"
+                      : `${totalFindings} ${pluralize(totalFindings, "Issue")} Found`}
                   </span>
-                  <span>
+                  {totalFindings > 0 && (
+                    <div className="flex flex-col items-start gap-0.5 text-ink-muted sm:items-end">
+                      {(Object.keys(CATEGORY_META) as FindingCategory[])
+                        .map((cat) => ({ cat, count: grouped[cat].length }))
+                        .filter((c) => c.count > 0)
+                        .map((c) => (
+                          <span key={c.cat}>
+                            {c.count} {pluralize(c.count, CATEGORY_SINGULAR[c.cat])}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                  <span className="mt-0.5">
                     {result.language} · {result.lineCount} lines
                   </span>
                   <button
@@ -315,10 +355,17 @@ export function AnalyzerTool() {
                 })}
 
                 {totalFindings === 0 && (
-                  <div className="rounded-xl2 border border-dashed border-border-soft px-6 py-8 text-center text-[13.5px] text-ink-faint">
-                    Nothing jumped out. Doesn&apos;t guarantee bug-free — the
-                    checks here are static heuristics, not a full linter or
-                    test suite.
+                  <div className="flex flex-col items-center gap-2 rounded-xl2 border border-dashed border-border-soft px-6 py-10 text-center">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400/10">
+                      <Check size={18} className="text-emerald-400" />
+                    </span>
+                    <p className="text-[14px] font-medium text-ink">
+                      Nothing jumped out.
+                    </p>
+                    <p className="max-w-sm text-[12.5px] leading-relaxed text-ink-faint">
+                      That doesn&apos;t guarantee bug-free code. These checks
+                      are static heuristics, not a full linter or test suite.
+                    </p>
                   </div>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import type { Finding } from "./types";
 
 /**
- * Every check here is a cheap textual heuristic, not a real parser — it
+ * Every check here is a cheap textual heuristic, not a real parser: it
  * flags *patterns worth a human look*, not proven defects. Kept
  * deliberately simple (no AST) so it runs instantly on any pasted
  * snippet in any of the languages we claim to support, at the cost of
@@ -20,34 +20,13 @@ export function findBugPatterns(code: string, language: string): Finding[] {
     const trimmed = raw.trim();
     const lineNo = i + 1;
 
-    // --- Cross-language ---
-    if (/\bTODO\b|\bFIXME\b|\bXXX\b/.test(trimmed)) {
-      findings.push({
-        category: "bug",
-        severity: "low",
-        line: lineNo,
-        title: "Unresolved TODO/FIXME",
-        detail: "Leftover marker suggests known-incomplete or known-broken logic.",
-      });
-    }
-
-    if (/password\s*=\s*["'][^"']+["']|api[_-]?key\s*=\s*["'][^"']+["']|secret\s*=\s*["'][^"']+["']/i.test(trimmed)) {
-      findings.push({
-        category: "bug",
-        severity: "high",
-        line: lineNo,
-        title: "Hardcoded credential",
-        detail: "A secret-looking value is hardcoded in source. Move it to an environment variable or secret store.",
-      });
-    }
-
     if (/\bcatch\s*\([^)]*\)\s*\{\s*\}/.test(line) || /except.*:\s*pass\s*$/.test(trimmed)) {
       findings.push({
         category: "bug",
         severity: "high",
         line: lineNo,
-        title: "Empty error handler",
-        detail: "Errors are being silently swallowed — failures here won't surface anywhere.",
+        title: "Empty catch block",
+        detail: "Errors are being silently swallowed. Failures here won't surface anywhere.",
       });
     }
 
@@ -58,7 +37,7 @@ export function findBugPatterns(code: string, language: string): Finding[] {
         severity: "high",
         line: lineNo,
         title: "Off-by-one loop bound (<= .length)",
-        detail: "Looping while i <= array.length reads one index past the end — array[length] is undefined. Use '<' unless reading past the end is genuinely intended.",
+        detail: "Looping while i <= array.length reads one index past the end: array[length] is undefined. Use '<' unless reading past the end is genuinely intended.",
       });
     }
     if (
@@ -70,7 +49,7 @@ export function findBugPatterns(code: string, language: string): Finding[] {
         severity: "high",
         line: lineNo,
         title: "Off-by-one loop bound (starts at .length)",
-        detail: "Starting the index at array.length means the first access is array[length], which is undefined — start at 'length - 1' instead.",
+        detail: "Starting the index at array.length means the first access is array[length], which is undefined. Start at 'length - 1' instead.",
       });
     }
 
@@ -81,17 +60,8 @@ export function findBugPatterns(code: string, language: string): Finding[] {
           category: "bug",
           severity: "medium",
           line: lineNo,
-          title: "Loose equality (==)",
+          title: "Dangerous equality (==)",
           detail: "Use === / !== to avoid type-coercion surprises (e.g. '' == 0 is true).",
-        });
-      }
-      if (/console\.(log|debug)\(/.test(line)) {
-        findings.push({
-          category: "style",
-          severity: "low",
-          line: lineNo,
-          title: "Leftover console output",
-          detail: "Debug logging left in — usually fine in dev, noisy or leaky in production.",
         });
       }
       if (/\.then\(/.test(line) && !/\.catch\(/.test(code)) {
@@ -103,22 +73,16 @@ export function findBugPatterns(code: string, language: string): Finding[] {
           detail: "An unhandled promise rejection here can crash a Node process or fail silently in the browser.",
         });
       }
-      if (/\bvar\s+\w/.test(line)) {
-        findings.push({
-          category: "bug",
-          severity: "low",
-          line: lineNo,
-          title: "'var' declaration",
-          detail: "'var' is function-scoped and hoisted, which is a common source of bugs — prefer 'let'/'const'.",
-        });
-      }
-      if (/if\s*\(.*=[^=].*\)/.test(line) && !/==/.test(line)) {
+      if (
+        (/if\s*\(.*=[^=].*\)/.test(line) || /while\s*\(.*=[^=].*\)/.test(line)) &&
+        !/==/.test(line)
+      ) {
         findings.push({
           category: "bug",
           severity: "high",
           line: lineNo,
-          title: "Possible assignment in condition",
-          detail: "This looks like '=' (assignment) inside an 'if' condition rather than '==' / '===' (comparison).",
+          title: "Assignment in condition",
+          detail: "This looks like '=' (assignment) inside an 'if'/'while' condition rather than '==' / '===' (comparison).",
         });
       }
     }
@@ -131,7 +95,7 @@ export function findBugPatterns(code: string, language: string): Finding[] {
           severity: "medium",
           line: lineNo,
           title: "Bare except",
-          detail: "Catches every exception including KeyboardInterrupt/SystemExit — catch a specific exception type instead.",
+          detail: "Catches every exception including KeyboardInterrupt/SystemExit. Catch a specific exception type instead.",
         });
       }
       if (/def\s+\w+\([^)]*=\s*(\[\]|\{\})/.test(line)) {
@@ -140,29 +104,9 @@ export function findBugPatterns(code: string, language: string): Finding[] {
           severity: "high",
           line: lineNo,
           title: "Mutable default argument",
-          detail: "Default list/dict arguments are shared across all calls in Python — use None and create the value inside the function.",
+          detail: "Default list/dict arguments are shared across all calls in Python. Use None and create the value inside the function.",
         });
       }
-      if (/print\(/.test(trimmed)) {
-        findings.push({
-          category: "style",
-          severity: "low",
-          line: lineNo,
-          title: "Leftover print statement",
-          detail: "Debug print left in — consider a logger for anything beyond a quick script.",
-        });
-      }
-    }
-
-    // --- SQL injection smell (any language) ---
-    if (/(SELECT|INSERT|UPDATE|DELETE)[^;]*['"]\s*\+/i.test(line) || /f["']\s*(SELECT|INSERT|UPDATE|DELETE)/i.test(line)) {
-      findings.push({
-        category: "bug",
-        severity: "high",
-        line: lineNo,
-        title: "Possible SQL injection",
-        detail: "Query looks like it's built with string concatenation/interpolation instead of parameterized queries.",
-      });
     }
   });
 

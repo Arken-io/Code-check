@@ -19,7 +19,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Code Check · Arken",
   description:
-    "Paste your code, get an instant static review — bugs, slow spots, duplication, and a score out of 10. No AI, no API key, nothing leaves your browser. Built by Arken.",
+    "Paste your code, get an instant static review: bugs, slow spots, duplication, and a score out of 10. No AI, no API key, nothing leaves your browser. Built by Arken.",
   icons: {
     icon: [
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
